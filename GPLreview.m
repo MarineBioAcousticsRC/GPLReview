@@ -52,14 +52,12 @@ function GPLreview_OpeningFcn(hObject, ~, handles, varargin)
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to GPLreview (see
  
-handles.j=1;
-handles.marker_count=0;
-handles.reverse_vector=0;
-handles.reverse_counter=0;
-handles.dim_coords=0;
-handles.filter=0;
-handles.brightness=0.3;
-handles.NextFile=0;
+handles.j = 1;
+handles.marker_count = 0;
+handles.dim_coords = 0;
+handles.filter = 0;
+handles.brightness = 0.3;
+handles.NextFile = 0;
 
 % Choose default command line output for GPLreview
 handles.output = hObject;
@@ -145,6 +143,7 @@ function start_freq_Callback(hObject, ~, handles)
 handles.StartFreqVal = str2double(get(handles.start_freq,'String'));
 guidata(hObject, handles);
 
+
 % --- Executes during object creation, after setting all properties.
 function start_freq_CreateFcn(hObject, ~, handles)
 % hObject    handle to start_freq (see GCBO)
@@ -161,6 +160,7 @@ function end_freq_Callback(hObject, ~, handles)
 % handles    structure with handles and user data (see GUIDATA)
 handles.EndFreqVal = str2double(get(handles.end_freq,'String'));
 guidata(hObject, handles);
+
 
 % --- Executes during object creation, after setting all properties.
 function end_freq_CreateFcn(hObject, ~, handles)
@@ -215,20 +215,19 @@ function plot_spec_Callback(hObject, ~, handles)
 % handles    structure with handles and user data (see GUIDATA)
 if ~isfield(handles,'WaveFile')
     error('Please identify audio data folder.')
-elseif ~isfield(handles,'AudioData')
-    pushbutton2_Callback(hObject, 1, handles)
 end
-
-guidata(hObject, handles);
-if isempty(handles.bt)
+if ~isfield(handles,'AudioData') || isempty(handles.AudioData)
+    fprintf('Loading audio data\n for this window.')
+    pushbutton2_Callback(hObject, 1, handles)
+elseif isempty(handles.bt)
     disp('No detections in this file. Skipping.')
     handles.NextFile = 1;
     pushbutton2_Callback(hObject,[],handles)
+else
+    disp('Redrawing spectrogram.')
+    draw_spectogram(handles);
 end
-draw_spectogram(handles);
-
-%set(handles.start_time, 'String', datestr(handles.bt(1+sum(handles.reverse_vector(1:end-1)),4),0));
-%set(handles.end_time, 'String', datestr(handles.bt(sum(handles.reverse_vector(1:end)),4),0));
+guidata(hObject, handles);
 
 
 % --- Executes on button press in pushbutton2.
@@ -237,11 +236,12 @@ function pushbutton2_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-%% Move forward button '>'
-if(handles.NextFile==1)
+% % Move forward button '>'
+if(handles.NextFile == 1) || handles.j==size(handles.bt,2)
+    disp('Advancing to next detection file')
     % If we need to advance to next file, 
     bt = [];
-    while isempty(bt)&& handles.CurrentDetectionFileIdx<length(handles.DetectionFileList)
+    while isempty(bt) && handles.CurrentDetectionFileIdx<length(handles.DetectionFileList)
         % Load the next detection file and identify the associated audio file
         handles.CurrentDetectionFileIdx = handles.CurrentDetectionFileIdx+1;
         handles.DetectionFile = handles.DetectionFileList(handles.CurrentDetectionFileIdx).name;
@@ -256,38 +256,34 @@ if(handles.NextFile==1)
                 handles.WaveFileList(handles.CurrentWavIdx).name);
             % load new detection file
             fprintf('Opening %s\n',handles.DetectionFile)
+            fprintf('Associated audio file is %s\n',handles.WaveFile)
             load(fullfile(handles.DetectionFilePath,handles.DetectionFile));
             if isempty(bt)
                 fprintf('No detections in this file. Skipping.\n')
+            else
+                fprintf('This file contains %.f detections\n', size(bt,1))
             end
         end
     end
-    % whos bt
     handles.bt = bt;
-    
     handles.j = 1;
     handles.ViewStart = 1;
     handles.marker_count = 0;
-    %handles.reverse_vector=0;
-    %handles.reverse_counter=0;    
+else
+    disp('Moving forward in file.')
 end
-
 audioData = []; handles.AudioData=[]; handles.markers=0; length_index=0;
 
 bt = handles.bt;
-handles.ViewStart = handles.j;
-%handles.previous_count = handles.reverse_counter;
-%handles.reverse_counter = 0;
-
 audioInfo = audioinfo(handles.WaveFile);
 audioSize = audioInfo.TotalSamples;
 buffer = handles.BufferVal*handles.SampleFreqVal;
+handles.ViewStart = handles.j;
 
-while(length(handles.AudioData) < handles.SampleFreqVal*handles.PlotLengthVal) && (handles.j <= size(bt,1))
-    
-    %handles.reverse_counter = handles.reverse_counter+1;
+fprintf('Window starting at detection %0.0f\n',handles.ViewStart)
+while(length(handles.AudioData) < handles.SampleFreqVal*handles.PlotLengthVal)...
+        && (handles.j <= size(bt,1))
     % data=wavread(handles.WaveFile,[bt(handles.j,1)-buffer,bt(handles.j,2)+buffer]);
-    % handles.j = min(handles.j, size(bt,1)+1);
 
     % Read in the audio data that goes with this detection (currently
     % doesn't check if buffer reads into header).
@@ -295,45 +291,31 @@ while(length(handles.AudioData) < handles.SampleFreqVal*handles.PlotLengthVal) &
         min(bt(handles.j,2) + buffer,audioSize)]);
     
     handles.AudioData=[handles.AudioData;audioData];
-    handles.j = handles.j+1;
     length_index = length_index+length(audioData);
     handles.markers = [handles.markers,length_index];
+    handles.j = handles.j+1;
 end
+handles.ViewEnd = handles.j-1;
+fprintf('Window ending at detection %.0f\n',handles.ViewEnd)
+set(handles.percent_completed,'String',(handles.ViewEnd)/size(handles.bt,1)*100)
 
-set(handles.percent_completed,'String',handles.j/length(handles.bt)*100)
-
-handles.marker_count = handles.marker_count+length(handles.markers);
-% handles.marker_count
-
-% handles.reverse_vector = [handles.reverse_vector,handles.reverse_counter];
-% handles.reverse_vector
-
-% handles.bt = bt;
+handles.marker_count = handles.marker_count + length(handles.markers);
 
 handles.plot_length_prev = get(handles.plot_length,'string');
-if(handles.j == length(bt))
+if(handles.ViewEnd >= length(bt))
     set(handles.plot_length,'String',length(handles.AudioData)/...
         handles.SampleFreqVal)
 end
-
 guidata(hObject, handles);
 plot_spec_Callback(hObject, eventdata, handles)
 
-% set(handles.plot_length,'String',handles.plot_length_prev)
-% set(handles.wave_filename,'String',handles.WaveFile);
-% set(handles.detection_filename,'String',handles.DetectionFile);
-
-if(handles.j==length(bt)+1)
+if(handles.ViewEnd>=size(bt,1))
     handles.NextFile = 1;
+    fprintf('Reached end of this detection file.\n')
 else
     handles.NextFile =0;
 end
-
 guidata(hObject, handles);
-% handles.AudioData=[];
-
-%  pushbutton2_Callback(hObject, eventdata, handles)
-
 
 
 % --- Executes on button press in pushbutton3.
@@ -342,7 +324,8 @@ function pushbutton3_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-%% Scroll backward button '<'
+% % Scroll backward button '<'
+disp('Moving backward.')
 if handles.ViewStart<=1
     % need to open the previous file
     if handles.CurrentDetectionFileIdx>1
@@ -365,6 +348,8 @@ if handles.ViewStart<=1
                 load(fullfile(handles.DetectionFilePath,handles.DetectionFile));
                 if isempty(bt)
                     fprintf('No detections in this file, backing up further.\n')
+                else
+                    fprintf('This file contains %.f detections\n', size(bt,1))
                 end
             end
         end
@@ -376,27 +361,27 @@ if handles.ViewStart<=1
         %handles.reverse_vector=0;
         %handles.reverse_counter=0;
         handles.ViewStart = handles.j;
+        handles.ViewEnd = handles.j;
+
     else
         fprintf('There are no earlier files in this folder\n')
     end
+else
+    handles.j = handles.ViewStart;
+    handles.ViewEnd = handles.j-1;
+    viewStart = handles.ViewStart-1;
 end
-%       handles.j=handles.j-handles.reverse_vector(end)-handles.reverse_vector(end-1);
-%     handles.marker_count=handles.marker_count-handles.reverse_vector(end);
-%     handles.reverse_vector=handles.reverse_vector(1:end-2);
 %     guidata(hObject, handles);
-%     pushbutton2_Callback(hObject, eventdata, handles)
 audioInfo = audioinfo(handles.WaveFile);
 audioSize = audioInfo.TotalSamples;
 
 handles.AudioData = [];
 buffer = handles.BufferVal*handles.SampleFreqVal;
-handles.j = handles.ViewStart;
-viewStart = handles.j;
-handles.markers = [];
+handles.markers = 0;
 
-length_index = 0;
+fprintf('Window ending at detection %0.0f\n', handles.ViewEnd)
 while(length(handles.AudioData) < handles.SampleFreqVal*handles.PlotLengthVal)...
-        && (viewStart > 0)
+        && (viewStart > 0)||(viewStart == 1)
     % Read in the audio data that goes with this detection (currently
     % doesn't check if buffer reads into header).
     audioData = audioread(handles.WaveFile,[handles.bt(viewStart,1)-buffer,...
@@ -409,16 +394,14 @@ while(length(handles.AudioData) < handles.SampleFreqVal*handles.PlotLengthVal)..
     handles.markers = [0,handles.markers+reverseLengthIndex];
     viewStart = viewStart-1;
 end
-handles.ViewStart = viewStart;
-set(handles.percent_completed,'String',handles.j/length(handles.bt)*100)
+handles.ViewStart = viewStart+1;
+fprintf('Window starting at detection %0.0f\n',handles.ViewStart)
+set(handles.percent_completed,'String',handles.ViewEnd/size(handles.bt,1)*100)
 handles.marker_count = handles.marker_count+length(handles.markers);
 
 guidata(hObject, handles);
 plot_spec_Callback(hObject, eventdata, handles)
 guidata(hObject, handles);
-
-
-%%
 
 
 
@@ -427,15 +410,12 @@ function slider1_Callback(hObject, eventdata, handles)
 % hObject    handle to slider1 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
 
-handles.brightness=get(hObject,'Value');
+handles.brightness = get(hObject,'Value');
 guidata(hObject,handles);
-
 plot_spec_Callback(hObject, eventdata, handles)
-
 
 
 % --- Executes during object creation, after setting all properties.
@@ -457,7 +437,6 @@ function deliminate_calls_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of deliminate_calls
-
 handles.deliminate_calls = get(hObject,'Value');
 guidata(hObject,handles);
 
@@ -467,16 +446,16 @@ function mark_Callback(hObject, eventdata, handles)
 % hObject    handle to mark (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles  structure with handles and user data (see GUIDATA)
+% % Mark selected picks as true
 coordinates = ginput(2);
 handles.value_mark = handles.MarkerNumberVal;
 
 [~, k2] = find(handles.markers/handles.OverlapVal > coordinates(1,1));
 [~, k4] = find(handles.markers/handles.OverlapVal <= coordinates(2,1));
 
-
 k5 = intersect(k2-1,k4);
 
-handles.bt(sum(handles.reverse_vector(1:end-1))+k5,3)=handles.value_mark;
+handles.bt(handles.ViewStart+k5-1,3) = handles.value_mark;
 
 bt = handles.bt;
 save(strcat([handles.DetectionFilePath,handles.DetectionFile]), 'bt','-append')
@@ -500,7 +479,7 @@ function play_audio_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-coordinates=ginput(2);
+coordinates = ginput(2);
 round(coordinates);
 
 [~, k2] = find(handles.markers/handles.OverlapVal > coordinates(1,1));
@@ -508,21 +487,21 @@ round(coordinates);
 
 %added so that Amanda can see exact time of audio that's playing:
 k5 = intersect(k2-1,k4);
-datestr(handles.bt(sum(handles.reverse_vector(1:end-1))+k5(1),4))
-datestr(handles.bt(sum(handles.reverse_vector(1:end-1))+k5(end),4))
+datestr(handles.bt(handles.ViewStart+k5(1)-1,4))
+datestr(handles.bt(handles.ViewStart+k5(end),4))
 
-if(handles.filter==1)
-       
+if(handles.filter == 1)
+    % Apply a band pass filter
     lower_freq = coordinates(1,2)/handles.FFTLVal*handles.SampleFreqVal;
     upper_freq = coordinates(2,2)/handles.FFTLVal*handles.SampleFreqVal;
     
     fs = handles.SampleFreqVal; % sampling rate
     
-    F=[lower_freq-50 lower_freq upper_freq upper_freq+50];  % band limits
-    A=[0 1 0];                % band type: 0='stop', 1='pass'
-    dev=[0.0001 10^(0.1/20)-1 0.0001]; % ripple/attenuation spec
-    [M,Wn,beta,typ]= kaiserord(F,A,dev,fs);  % window parameters
-    b=fir1(M,Wn,typ,kaiser(M+1,beta),'noscale'); % filter design
+    F = [lower_freq-50, lower_freq, upper_freq, upper_freq+50];  % band limits
+    A = [0 1 0];                % band type: 0='stop', 1='pass'
+    dev = [0.0001, 10^(0.1/20)-1, 0.0001]; % ripple/attenuation spec
+    [M,Wn,beta,typ] = kaiserord(F,A,dev,fs);  % window parameters
+    b = fir1(M,Wn,typ,kaiser(M+1,beta),'noscale'); % filter design
     DATA = filter(b,1,handles.AudioData(coordinates(1,1)*...
         handles.OverlapVal:coordinates(2,1)...
         *handles.OverlapVal));
@@ -567,12 +546,15 @@ function mark_yes_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-handles.bt(sum(handles.reverse_vector(1:end-1))+(1:length(handles.markers)-1),3)=1;
+% % Mark everything as true
+fprintf('Labeling %0.0f detections as TRUE.\n',...
+    handles.ViewEnd-handles.ViewStart)
+handles.bt(handles.ViewStart:handles.ViewEnd,3) = 1;
 
 bt = handles.bt;
 save(strcat([handles.DetectionFilePath,handles.DetectionFile]), 'bt','-append')
 guidata(hObject,handles);
-
+% automatically advances? Why not just draw it?
 pushbutton2_Callback(hObject, eventdata, handles)
 
 
@@ -581,15 +563,15 @@ function mark_no_Callback(hObject, eventdata, handles)
 % hObject    handle to mark_no (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
-handles.bt(sum(handles.reverse_vector(1:end-1))+(1:length(handles.markers)-1),3)=0;
+fprintf('Labeling %0.0f detections as FALSE.\n',...
+    handles.ViewEnd-handles.ViewStart)
+handles.bt(handles.ViewStart:handles.ViewEnd,3)=0;
 
 bt = handles.bt;
 save(strcat([handles.DetectionFilePath,handles.DetectionFile]), 'bt','-append')
 guidata(hObject,handles);
 
-
-%plot_spec_Callback(hObject, eventdata, handles)
+% plot_spec_Callback(hObject, eventdata, handles)
 pushbutton2_Callback(hObject, eventdata, handles)
 
 % --- Executes on key press with focus on filter and none of its controls.
@@ -632,7 +614,6 @@ switch eventdata.Key
 end;
 
 
-
 % --------------------------------------------------------------------
 function uipushtool3_ClickedCallback(hObject, eventdata, handles)
 % Choose folder of detection files to be reviewed, and specify start file
@@ -661,7 +642,6 @@ if FilterIndex >0
 else
     error('No detection file selected. \n')
 end
-
 
 
 % --------------------------------------------------------------------
@@ -725,8 +705,9 @@ function pushbutton10_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton10 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
-handles.bt(sum(handles.reverse_vector(1:end-1))+(1:length(handles.markers)-1),3)=2;
+fprintf('Labeling %0.0f detections as airguns.\n',...
+    handles.ViewEnd-handles.ViewStart)
+handles.bt(handles.ViewStart:handles.ViewEnd,3)=2;
 
 bt = handles.bt;
 save(strcat([handles.DetectionFilePath,handles.DetectionFile]), 'bt','-append')
@@ -753,7 +734,6 @@ handles.MarkerNumberVal = str2double(get(handles.marker_number,'String'));
 guidata(hObject,handles);
 
 
-
 % --- Executes during object creation, after setting all properties.
 function marker_number_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to marker_number (see GCBO)
@@ -770,6 +750,7 @@ handles.marker_number=get(hObject,'Value');
 handles.marker_number
 
 guidata(hObject,handles);
+
 
 function buffer_Callback(hObject, eventdata, handles)
 % hObject    handle to buffer (see GCBO)
@@ -798,20 +779,20 @@ function mark_subset_no_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-coordinates=ginput(2);
-handles.value_mark=str2double(get(handles.marker_number,'String'));
+coordinates = ginput(2);
+handles.value_mark = str2double(get(handles.marker_number,'String'));
 
+% identify which detections were picked
 [~, k2] = find(handles.markers/handles.OverlapVal > coordinates(1,1));
 [~, k4] = find(handles.markers/handles.OverlapVal <= coordinates(2,1));
 
-
 k5 = intersect(k2-1,k4);
-
-handles.bt(sum(handles.reverse_vector(1:end-1))+k5,3)=0;
+% Flag them as zeros
+fprintf('Flagging %.0f detection(s) as false.\n',length(k5))
+handles.bt(handles.ViewStart+k5-1,3) = 0;
 
 bt = handles.bt;
 save(strcat([handles.DetectionFilePath,handles.DetectionFile]), 'bt','-append')
 guidata(hObject,handles);
 
 plot_spec_Callback(hObject, eventdata, handles)
-

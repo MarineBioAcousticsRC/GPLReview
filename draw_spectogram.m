@@ -80,9 +80,9 @@ if(handles.deliminate_calls==1)
         %         end
         % plot([(markers(i)-(fftl/2-skip))/skip,(markers(i)-(fftl/2-skip))/skip],[0,sample_freq/2],'r','LineWidth',num_hours+1);
         % end
-        %i+sum(reverse_vector(1:end-1))
+        % i+sum(reverse_vector(1:end-1))
         
-        boxnumber = handles.bt(min(iDilim+sum(handles.reverse_vector(1:end-1)), size(handles.bt,1)),3);
+        boxnumber = handles.bt(handles.ViewStart+iDilim-1,3);
         
         boxcolor(1)='r';
         boxcolor(2)='g';
@@ -98,7 +98,7 @@ if(handles.deliminate_calls==1)
             ((handles.markers(iDilim)-(fftl/2-skip))/skip),...
             round(.01*(handles.EndFreqVal-handles.StartFreqVal))],...
             'FaceColor',boxcolor(boxnumber+1))
-        thisExpNum = handles.j - handles.ViewStart+ iDilim - 1;
+        thisExpNum = handles.ViewStart+ iDilim-1;
         if thisExpNum>1 && thisExpNum<=size(handles.bt,1)
             % calculate time since previous detection and round to nearest
             % second.
@@ -121,8 +121,7 @@ if(handles.deliminate_calls==1)
         %       if(bt(i+sum(reverse_vector(1:end-1)),3) > 1)
         %           rectangle('Position',[(markers(i)-(fftl/2-skip))/skip,0,((markers(i+1)-(fftl/2-skip))/skip)-((markers(i)-(fftl/2-skip))/skip),3],'FaceColor','c')
         %       end
-
-        iDilim = iDilim+1;
+        % iDilim = iDilim+1;
     end
     % rectangle('Position',[markers(i)/skip,0,(markers(i+1)/skip)-(markers(i)/skip),3],'FaceColor','g')
     hold off;
