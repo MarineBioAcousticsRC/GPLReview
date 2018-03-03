@@ -70,7 +70,6 @@ handles.StartFreqVal = str2double(get(handles.start_freq,'String'));
 handles.EndFreqVal = str2double(get(handles.end_freq,'String'));
 handles.OverlapVal = str2double(get(handles.overlap,'String'));
 handles.PlotLengthVal = str2double(get(handles.plot_length,'String'));
-handles.PlotLengthVal = str2double(get(handles.plot_length,'String'));
 handles.MarkerNumberVal = str2double(get(handles.marker_number,'String'));
 handles.BufferVal = str2double(get(handles.buffer,'String'));
 handles.Whiten = 0;
@@ -176,7 +175,7 @@ function plot_length_Callback(hObject, ~, handles)
 % hObject    handle to plot_length (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-handles.PlotLengthVal = str2double(get(handles.plot_length,'String'));
+handles.PlotLengthVal = max(1,str2double(get(handles.plot_length,'String')));
 guidata(hObject, handles);
 
 
@@ -217,7 +216,7 @@ if ~isfield(handles,'WaveFile')
     error('Please identify audio data folder.')
 end
 if ~isfield(handles,'AudioData') || isempty(handles.AudioData)
-    fprintf('Loading audio data\n for this window.')
+    fprintf('Loading audio data for this window.\n')
     pushbutton2_Callback(hObject, 1, handles)
 elseif isempty(handles.bt)
     disp('No detections in this file. Skipping.')
@@ -237,7 +236,7 @@ function pushbutton2_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % % Move forward button '>'
-if(handles.NextFile == 1) || handles.j==size(handles.bt,2)
+if(handles.NextFile == 1) || handles.j>=size(handles.bt,1)
     disp('Advancing to next detection file')
     % If we need to advance to next file, 
     bt = [];
@@ -254,10 +253,14 @@ if(handles.NextFile == 1) || handles.j==size(handles.bt,2)
             % storing file name of new wav file
             handles.WaveFile = fullfile(handles.WaveFileList(handles.CurrentWavIdx).pathName,...
                 handles.WaveFileList(handles.CurrentWavIdx).name);
+            set(handles.wav_filename,'String', handles.WaveFileList(handles.CurrentWavIdx).name); % sets name on plot
+
             % load new detection file
             fprintf('Opening %s\n',handles.DetectionFile)
             fprintf('Associated audio file is %s\n',handles.WaveFile)
+
             load(fullfile(handles.DetectionFilePath,handles.DetectionFile));
+            set(handles.detection_filename,'String', handles.DetectionFile); % sets name on plot
             if isempty(bt)
                 fprintf('No detections in this file. Skipping.\n')
             else
@@ -302,9 +305,9 @@ set(handles.percent_completed,'String',(handles.ViewEnd)/size(handles.bt,1)*100)
 handles.marker_count = handles.marker_count + length(handles.markers);
 
 handles.plot_length_prev = get(handles.plot_length,'string');
-if(handles.ViewEnd >= length(bt))
-    set(handles.plot_length,'String',length(handles.AudioData)/...
-        handles.SampleFreqVal)
+if(handles.ViewEnd >= size(bt,1))
+    set(handles.plot_length,'String',max(1,length(handles.AudioData)/...
+        handles.SampleFreqVal))
 end
 guidata(hObject, handles);
 plot_spec_Callback(hObject, eventdata, handles)
@@ -343,8 +346,12 @@ if handles.ViewStart<=1
                 % storing file name of new wav file
                 handles.WaveFile = fullfile(handles.WaveFileList(handles.CurrentWavIdx).pathName,...
                     handles.WaveFileList(handles.CurrentWavIdx).name);
+                set(handles.wav_filename,'String', handles.WaveFileList(handles.CurrentWavIdx).name); % sets name on plot
+
                 % load new detection file
                 fprintf('Opening %s\n',handles.DetectionFile)
+                set(handles.detection_filename,'String', handles.DetectionFile); % sets name on plot
+
                 load(fullfile(handles.DetectionFilePath,handles.DetectionFile));
                 if isempty(bt)
                     fprintf('No detections in this file, backing up further.\n')
@@ -362,7 +369,7 @@ if handles.ViewStart<=1
         %handles.reverse_counter=0;
         handles.ViewStart = handles.j;
         handles.ViewEnd = handles.j;
-
+        viewStart = handles.ViewStart;
     else
         fprintf('There are no earlier files in this folder\n')
     end
@@ -746,8 +753,7 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
-handles.marker_number=get(hObject,'Value');
-handles.marker_number
+handles.marker_number = get(hObject,'Value');
 
 guidata(hObject,handles);
 
