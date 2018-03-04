@@ -40,15 +40,15 @@ if(handles.Whiten == 1)
     spc=conv2(spc,cross,'same');
     detSpectrum=spc;
 end
-
 specLength = size(handles.dim_coords);
 if(specLength(2)>1)
     dim = zeros(size(detSpectrum));
     dim(handles.dim_coords(1,1):handles.dim_coords(1,2),:) = 1;
-    imagesc(1:size(detSpectrum,2),freq(low:high),(dim.*detSpectrum).^((handles.brightness)*2/3));
+    imagesc(1:size(detSpectrum,2),freq(low:high),(dim.*detSpectrum).^((handles.brightness)*.5));
 else
-    imagesc(1:size(detSpectrum,2),freq(low:high),(detSpectrum).^((handles.brightness)*2/3));
+    imagesc(1:size(detSpectrum,2),freq(low:high),(detSpectrum).^((handles.brightness)*.5));
 end
+set(gca,'CLim',[0,1+(handles.brightness/2)])
 
 % Set up axis labels
 axis xy;

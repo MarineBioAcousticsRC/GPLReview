@@ -253,7 +253,7 @@ if(handles.NextFile == 1) || handles.j>=size(handles.bt,1)
             % storing file name of new wav file
             handles.WaveFile = fullfile(handles.WaveFileList(handles.CurrentWavIdx).pathName,...
                 handles.WaveFileList(handles.CurrentWavIdx).name);
-            set(handles.wav_filename,'String', handles.WaveFileList(handles.CurrentWavIdx).name); % sets name on plot
+            set(handles.wave_filename,'String', handles.WaveFileList(handles.CurrentWavIdx).name); % sets name on plot
 
             % load new detection file
             fprintf('Opening %s\n',handles.DetectionFile)
@@ -346,7 +346,7 @@ if handles.ViewStart<=1
                 % storing file name of new wav file
                 handles.WaveFile = fullfile(handles.WaveFileList(handles.CurrentWavIdx).pathName,...
                     handles.WaveFileList(handles.CurrentWavIdx).name);
-                set(handles.wav_filename,'String', handles.WaveFileList(handles.CurrentWavIdx).name); % sets name on plot
+                set(handles.wave_filename,'String', handles.WaveFileList(handles.CurrentWavIdx).name); % sets name on plot
 
                 % load new detection file
                 fprintf('Opening %s\n',handles.DetectionFile)
