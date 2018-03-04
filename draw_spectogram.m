@@ -40,6 +40,9 @@ if(handles.Whiten == 1)
     spc=conv2(spc,cross,'same');
     detSpectrum=spc;
 end
+% normalize so brightness can be semi-predictable
+detSpectrum = detSpectrum/max(max(detSpectrum));
+
 specLength = size(handles.dim_coords);
 if(specLength(2)>1)
     dim = zeros(size(detSpectrum));
@@ -48,7 +51,7 @@ if(specLength(2)>1)
 else
     imagesc(1:size(detSpectrum,2),freq(low:high),(detSpectrum).^((handles.brightness)*.5));
 end
-set(gca,'CLim',[0,1+(handles.brightness/2)])
+set(gca,'CLim',[0,.5+(handles.brightness*.5)])
 
 % Set up axis labels
 axis xy;
