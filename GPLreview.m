@@ -494,8 +494,10 @@ round(coordinates);
 
 %added so that Amanda can see exact time of audio that's playing:
 k5 = intersect(k2-1,k4);
+
 datestr(handles.bt(handles.ViewStart+k5(1)-1,4))
-datestr(handles.bt(handles.ViewStart+k5(end),4))
+datestr(handles.bt(handles.ViewStart+k5(1)-1,5))
+
 
 if(handles.filter == 1)
     % Apply a band pass filter
