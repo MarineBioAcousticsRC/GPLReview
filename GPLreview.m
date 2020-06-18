@@ -278,18 +278,26 @@ end
 audioData = []; handles.AudioData=[]; handles.markers=0; length_index=0;
 
 bt = handles.bt;
+if isempty(bt)
+    disp('Reached end of file list.');
+    return
+end
 audioInfo = audioinfo(handles.WaveFile);
 audioSize = audioInfo.TotalSamples;
 buffer = handles.BufferVal*handles.SampleFreqVal;
 handles.ViewStart = handles.j;
 
 fprintf('Window starting at detection %0.0f\n',handles.ViewStart)
+
 while(length(handles.AudioData) < handles.SampleFreqVal*handles.PlotLengthVal)...
         && (handles.j <= size(bt,1))
     % data=wavread(handles.WaveFile,[bt(handles.j,1)-buffer,bt(handles.j,2)+buffer]);
 
     % Read in the audio data that goes with this detection (currently
     % doesn't check if buffer reads into header).
+   if bt(1,1)<1
+       bt(1,1) = 1;
+   end
     audioData = audioread(handles.WaveFile,[bt(handles.j,1)-buffer,...
         min(bt(handles.j,2) + buffer,audioSize)]);
     
@@ -315,6 +323,7 @@ plot_spec_Callback(hObject, eventdata, handles)
 if(handles.ViewEnd>=size(bt,1))
     handles.NextFile = 1;
     fprintf('Reached end of this detection file.\n')
+    
 else
     handles.NextFile =0;
 end
